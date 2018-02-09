@@ -7,6 +7,7 @@ import android.net.Uri;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -20,7 +21,11 @@ import java.util.List;
 import br.com.alura.agenda.adapter.AlunosAdapter;
 import br.com.alura.agenda.dao.AlunoDAO;
 import br.com.alura.agenda.modelo.Aluno;
+import br.com.alura.agenda.retrofit.RetrofitInicializador;
 import br.com.alura.agenda.tasks.EnviaAlunosTask;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class ListaAlunosActivity extends AppCompatActivity {
 
@@ -59,6 +64,11 @@ public class ListaAlunosActivity extends AppCompatActivity {
     private void carregaLista() {
         AlunoDAO dao = new AlunoDAO(this);
         List<Aluno> alunos = dao.buscaAlunos();
+
+        for (Aluno aluno: alunos) {
+            Log.i("id do aluno: ", aluno.getId());
+        }
+
         dao.close();
 
         AlunosAdapter adapter = new AlunosAdapter(this, alunos);
@@ -68,6 +78,24 @@ public class ListaAlunosActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+
+        Call<List<Aluno>> call = new RetrofitInicializador().getAlunoService().lista();
+        call.enqueue(new Callback<List<Aluno>>() {
+            @Override
+            public void onResponse(Call<List<Aluno>> call, Response<List<Aluno>> response) {
+                List<Aluno> alunos = response.body();
+
+                AlunoDAO dao = new AlunoDAO(ListaAlunosActivity.this);
+                dao.sincroniza(alunos);
+                dao.close();
+            }
+
+            @Override
+            public void onFailure(Call<List<Aluno>> call, Throwable t) {
+                Log.e("onFailure: ", t.getMessage());
+            }
+        });
+
         carregaLista();
     }
 
